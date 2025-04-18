@@ -13,7 +13,7 @@ client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 # Page configuration
 st.set_page_config(
-    page_title="Kitchen Companion",
+    page_title="Shared Skillet AI",
     page_icon="🍳",
     layout="wide"
 )
@@ -257,7 +257,7 @@ def generate_meal_plan():
         
         # Call OpenAI to generate a meal plan
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": generate_system_message(purpose="meal_plan")},
                 {"role": "user", "content": f"Create a weekly meal plan based on these preferences: {preferences}"}
@@ -338,7 +338,8 @@ if st.session_state.current_tab == "Chat":
     # Intro message for new users
     if not st.session_state.messages:
         st.markdown("""
-        ## 👋 Welcome to Your Kitchen Companion!
+        ## 👋 Welcome to Shared Skillet AI!
+        You can visit sharedskillet.com and view some ready made recipes. You can also share your own recipes with community.
         
         I'm your AI cooking assistant, ready to help with:
         
@@ -357,7 +358,7 @@ if st.session_state.current_tab == "Chat":
         # Add default welcome message
         st.session_state.messages.append({
             "role": "assistant", 
-            "content": "Hello! I'm your cooking assistant. What would you like to cook today?"
+            "content": "Hello! I'm Shared Skillet AI: your cooking assistant. What would you like to cook today?"
         })
     
     # Display chat messages from history
@@ -629,6 +630,6 @@ elif st.session_state.current_tab == "Meal Planning":
 # Add a small custom footer
 st.markdown("""
 <div style="text-align: center; margin-top: 30px; font-size: 0.8em; color: #666;">
-    Kitchen Companion | Your personal AI cooking assistant
+    Shared Skillet AI | Your personal AI cooking assistant
 </div>
 """, unsafe_allow_html=True)
