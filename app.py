@@ -79,7 +79,25 @@ if 'shopping_list' not in st.session_state:
 if 'meal_plan' not in st.session_state:
     st.session_state.meal_plan = {}
 if 'current_tab' not in st.session_state:
-    st.session_state.current_tab = "Chat"
+    st.session_state.current_tab = "Help"
+    st.markdown("""
+    ## 👨‍🍳 How to Use Shared Skillet AI
+
+    Shared Skillet AI is your virtual kitchen buddy. Just type like you're chatting with a friend, and it can help you:
+
+    - 🍽️ Suggest recipes using ingredients you have
+    - 🧠 Answer cooking questions or give tips
+    - 🛒 Build and manage your shopping list
+    - 🗓️ Create a full 7-day meal plan tailored to your diet and skill level
+
+    ### 🟢 Try asking:
+    - "Give me a vegetarian pasta recipe."
+    - "What can I make with chicken, tomatoes, and rice?"
+    - "Add this recipe to my shopping list."
+    - "Create a weekly keto meal plan for a beginner."
+
+    Switch between tabs to access your **Chat**, **Shopping List**, or **Meal Plan** at any time.
+    """)
 if 'user_preferences' not in st.session_state:
     # Default preferences - you can customize these
     st.session_state.user_preferences = {
@@ -89,7 +107,7 @@ if 'user_preferences' not in st.session_state:
     }
 
 # Custom tab UI
-tabs = ["Chat", "Shopping List", "Meal Planning"]
+tabs = ["Help", "Chat", "Shopping List", "Meal Planning"]
 cols = st.columns(len(tabs))
 for i, tab in enumerate(tabs):
     with cols[i]:
