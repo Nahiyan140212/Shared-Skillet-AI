@@ -95,7 +95,7 @@ for i, tab in enumerate(tabs):
     with cols[i]:
         if st.button(tab, key=f"tab_{tab}", use_container_width=True):
             st.session_state.current_tab = tab
-            st.experimental_rerun()
+            st.rerun()
 
 # Show current tab
 st.markdown(f"## {st.session_state.current_tab}")
@@ -450,7 +450,7 @@ elif st.session_state.current_tab == "Shopping List":
         # Button to go back to chat
         if st.button("Ask for Recipe Ideas"):
             st.session_state.current_tab = "Chat"
-            st.experimental_rerun()
+            st.rerun()
     else:
         # Display shopping list by category
         col1, col2 = st.columns([3, 1])
@@ -471,13 +471,13 @@ elif st.session_state.current_tab == "Shopping List":
                         with col_c:
                             if st.button("Remove", key=f"remove_{category}_{i}"):
                                 st.session_state.shopping_list[category].pop(i)
-                                st.experimental_rerun()
+                                st.rerun()
             
         with col2:
             st.subheader("Actions")
             if st.button("Clear Shopping List"):
                 st.session_state.shopping_list = {}
-                st.experimental_rerun()
+                st.rerun()
             
             if st.button("Export as CSV"):
                 # Convert to dataframe
@@ -525,7 +525,7 @@ elif st.session_state.current_tab == "Shopping List":
                             "unit": new_unit
                         })
                         st.success(f"Added {new_item} to shopping list!")
-                        st.experimental_rerun()
+                        st.rerun()
 
 elif st.session_state.current_tab == "Meal Planning":
     # Empty meal plan message
@@ -538,7 +538,7 @@ elif st.session_state.current_tab == "Meal Planning":
                 meal_plan = generate_meal_plan()
                 if meal_plan:
                     st.session_state.meal_plan = meal_plan
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("Failed to create meal plan. Please try again.")
         
@@ -549,7 +549,7 @@ elif st.session_state.current_tab == "Meal Planning":
                 "content": "I'd like you to create a meal plan for me. Can you help with that?"
             })
             st.session_state.current_tab = "Chat"
-            st.experimental_rerun()
+            st.rerun()
     else:
         # Display meal plan
         days_of_week = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -567,7 +567,7 @@ elif st.session_state.current_tab == "Meal Planning":
         with col3:
             if st.button("Create New Plan"):
                 st.session_state.meal_plan = {}
-                st.experimental_rerun()
+                st.rerun()
             
             if st.button("Add All to Shopping List"):
                 # Extract all ingredients from all meals
@@ -614,7 +614,7 @@ elif st.session_state.current_tab == "Meal Planning":
                                         "content": f"Please give me a detailed recipe for {meal['title']} ({meal['description']})"
                                     })
                                     st.session_state.current_tab = "Chat"
-                                    st.experimental_rerun()
+                                    st.rerun()
                                 
                                 if st.button(f"Add to Shopping List", key=f"shop_{day}_{meal_type}"):
                                     with st.spinner("Adding to shopping list..."):
