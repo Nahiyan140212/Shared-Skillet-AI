@@ -5,11 +5,11 @@ from datetime import datetime, timedelta
 import json
 import pandas as pd
 import re
+from openai import OpenAI
 
-# Set your OpenAI API key
+# Initialize the OpenAI client with your API key
 # IMPORTANT: For security, consider using Streamlit secrets management
-# https://docs.streamlit.io/streamlit-community-cloud/get-started/deploy-an-app/connect-to-data-sources/secrets-management
-openai.api_key = st.secrets["openai"]["api_key"]
+client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 # Page configuration
 st.set_page_config(
@@ -186,7 +186,7 @@ def generate_system_message(purpose="general"):
 def extract_preferences(message):
     try:
         # Call OpenAI to extract preferences
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a system that extracts cooking preferences from user messages. Extract any mentioned cooking style, dietary restrictions, or expertise level. Format as JSON with keys 'cooking_style', 'expertise_level', and 'dietary_restrictions' (array). Only respond with JSON."},
@@ -231,7 +231,7 @@ def extract_preferences(message):
 def extract_ingredients(recipe_text):
     try:
         # Call OpenAI to extract ingredients in structured format
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": generate_system_message(purpose="shopping_list")},
@@ -256,7 +256,7 @@ def generate_meal_plan():
         preferences = f"Cooking style: {prefs['cooking_style']}, Expertise level: {prefs['expertise_level']}, Dietary restrictions: {', '.join(prefs['dietary_restrictions'])}"
         
         # Call OpenAI to generate a meal plan
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": generate_system_message(purpose="meal_plan")},
@@ -397,7 +397,7 @@ if st.session_state.current_tab == "Chat":
                 
                 # Call OpenAI API
                 try:
-                    response = openai.ChatCompletion.create(
+                    response = client.chat.completions.create(
                         model="gpt-4",  # You can change to gpt-3.5-turbo to reduce costs
                         messages=messages,
                         temperature=0.7,
