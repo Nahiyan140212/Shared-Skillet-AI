@@ -73,8 +73,6 @@ if 'shopping_list' not in st.session_state:
     st.session_state.shopping_list = {}
 if 'meal_plan' not in st.session_state:
     st.session_state.meal_plan = {}
-if 'current_tab' not in st.session_state:
-    st.session_state.current_tab = "Help"
     st.markdown("""
     ## 👨‍🍳 How to Use Shared Skillet AI
 
