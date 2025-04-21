@@ -121,7 +121,7 @@ EURON_MODEL = "gemini-2.5-pro-exp-03-25"
 def get_euron_api_key():
     return st.secrets["euron"]["api_key"]
 
-def call_euron_api(messages, temperature=0.7, max_tokens=1000):
+def call_euron_api(messages, temperature=0.5, max_tokens=2000):
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {get_euron_api_key()}"
