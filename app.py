@@ -1,15 +1,10 @@
 import streamlit as st
-import openai
 import os
+import requests
 from datetime import datetime, timedelta
 import json
 import pandas as pd
 import re
-from openai import OpenAI
-
-# Initialize the OpenAI client with your API key
-# IMPORTANT: For security, consider using Streamlit secrets management
-client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
 # Page configuration
 st.set_page_config(
@@ -119,6 +114,39 @@ for i, tab in enumerate(tabs):
 st.markdown(f"## {st.session_state.current_tab}")
 st.divider()
 
+# Euron API configuration
+EURON_API_URL = "https://api.euron.one/api/v1/euri/alpha/chat/completions"
+EURON_MODEL = "gpt-4.1-nano"
+# Access the API key from Streamlit secrets
+def get_euron_api_key():
+    return st.secrets["euron"]["api_key"]
+
+def call_euron_api(messages, temperature=0.7, max_tokens=1000):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {get_euron_api_key()}"
+    }
+    
+    payload = {
+        "messages": messages,
+        "model": EURON_MODEL,
+        "max_tokens": max_tokens,
+        "temperature": temperature
+    }
+    
+    try:
+        response = requests.post(EURON_API_URL, headers=headers, json=payload)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        data = response.json()
+        # Extract content based on Euron API response structure
+        if 'choices' in data and len(data['choices']) > 0:
+            if 'message' in data['choices'][0] and 'content' in data['choices'][0]['message']:
+                return data['choices'][0]['message']['content']
+        return "I'm sorry, I couldn't process that request."
+    except Exception as e:
+        print(f"API error: {str(e)}")
+        return f"Error: {str(e)}"
+
 # Function to generate system message based on preferences
 def generate_system_message(purpose="general"):
     current_date = datetime.now().strftime("%Y-%m-%d")
@@ -203,20 +231,25 @@ def generate_system_message(purpose="general"):
 # Function to extract preferences from user messages
 def extract_preferences(message):
     try:
-        # Call OpenAI to extract preferences
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a system that extracts cooking preferences from user messages. Extract any mentioned cooking style, dietary restrictions, or expertise level. Format as JSON with keys 'cooking_style', 'expertise_level', and 'dietary_restrictions' (array). Only respond with JSON."},
-                {"role": "user", "content": message}
-            ],
-            temperature=0.3,
-            max_tokens=500
-        )
+        # Call Euron API to extract preferences
+        system_content = "You are a system that extracts cooking preferences from user messages. Extract any mentioned cooking style, dietary restrictions, or expertise level. Format as JSON with keys 'cooking_style', 'expertise_level', and 'dietary_restrictions' (array). Only respond with JSON."
+        
+        messages = [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": message}
+        ]
+        
+        response_content = call_euron_api(messages, temperature=0.3, max_tokens=500)
         
         # Extract JSON from response
         try:
-            prefs = json.loads(response.choices[0].message.content)
+            # Find JSON in the response
+            json_match = re.search(r'({.+})', response_content, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1)
+                prefs = json.loads(json_str)
+            else:
+                prefs = json.loads(response_content)
             
             # Update preferences if new ones were found
             updated = False
@@ -238,7 +271,8 @@ def extract_preferences(message):
                 
             return updated
             
-        except:
+        except Exception as e:
+            print(f"Error parsing preferences JSON: {str(e)}")
             return False
             
     except Exception as e:
@@ -248,20 +282,28 @@ def extract_preferences(message):
 # Function to extract ingredients from recipe text
 def extract_ingredients(recipe_text):
     try:
-        # Call OpenAI to extract ingredients in structured format
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": generate_system_message(purpose="shopping_list")},
-                {"role": "user", "content": f"Extract ingredients from this recipe: {recipe_text}"}
-            ],
-            temperature=0.3,
-            max_tokens=1000
-        )
+        # Call Euron API to extract ingredients in structured format
+        messages = [
+            {"role": "system", "content": generate_system_message(purpose="shopping_list")},
+            {"role": "user", "content": f"Extract ingredients from this recipe: {recipe_text}"}
+        ]
+        
+        response_content = call_euron_api(messages, temperature=0.3, max_tokens=1000)
         
         # Parse the response as JSON
-        ingredients_json = json.loads(response.choices[0].message.content)
-        return ingredients_json
+        try:
+            # Find JSON in the response
+            json_match = re.search(r'({.+})', response_content, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1)
+                ingredients_json = json.loads(json_str)
+            else:
+                ingredients_json = json.loads(response_content)
+            
+            return ingredients_json
+        except Exception as e:
+            print(f"Error parsing ingredients JSON: {str(e)}")
+            return {}
     except Exception as e:
         st.error(f"Error extracting ingredients: {str(e)}")
         return {}
@@ -273,20 +315,28 @@ def generate_meal_plan():
         prefs = st.session_state.user_preferences
         preferences = f"Cooking style: {prefs['cooking_style']}, Expertise level: {prefs['expertise_level']}, Dietary restrictions: {', '.join(prefs['dietary_restrictions'])}"
         
-        # Call OpenAI to generate a meal plan
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": generate_system_message(purpose="meal_plan")},
-                {"role": "user", "content": f"Create a weekly meal plan based on these preferences: {preferences}"}
-            ],
-            temperature=0.7,
-            max_tokens=2000
-        )
+        # Call Euron API to generate a meal plan
+        messages = [
+            {"role": "system", "content": generate_system_message(purpose="meal_plan")},
+            {"role": "user", "content": f"Create a weekly meal plan based on these preferences: {preferences}"}
+        ]
+        
+        response_content = call_euron_api(messages, temperature=0.7, max_tokens=2000)
         
         # Parse the response as JSON
-        meal_plan_json = json.loads(response.choices[0].message.content)
-        return meal_plan_json
+        try:
+            # Find JSON in the response
+            json_match = re.search(r'({.+})', response_content, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1)
+                meal_plan_json = json.loads(json_str)
+            else:
+                meal_plan_json = json.loads(response_content)
+            
+            return meal_plan_json
+        except Exception as e:
+            print(f"Error parsing meal plan JSON: {str(e)}")
+            return {}
     except Exception as e:
         st.error(f"Error generating meal plan: {str(e)}")
         return {}
@@ -414,17 +464,9 @@ if st.session_state.current_tab == "Chat":
                 for msg in st.session_state.messages:
                     messages.append({"role": msg["role"], "content": msg["content"]})
                 
-                # Call OpenAI API
+                # Call Euron API
                 try:
-                    response = client.chat.completions.create(
-                        model="gpt-4",  # You can change to gpt-3.5-turbo to reduce costs
-                        messages=messages,
-                        temperature=0.7,
-                        max_tokens=1000
-                    )
-                    
-                    # Extract the response content
-                    response_content = response.choices[0].message.content
+                    response_content = call_euron_api(messages, temperature=0.7, max_tokens=1000)
                     
                     # Add assistant response to chat history
                     st.session_state.messages.append({"role": "assistant", "content": response_content})
