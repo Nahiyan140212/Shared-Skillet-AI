@@ -73,6 +73,8 @@ if 'shopping_list' not in st.session_state:
     st.session_state.shopping_list = {}
 if 'meal_plan' not in st.session_state:
     st.session_state.meal_plan = {}
+if 'current_tab' not in st.session_state:
+    st.session_state.current_tab = "Help"
     st.markdown("""
     ## 👨‍🍳 How to Use Shared Skillet AI
 
@@ -115,11 +117,12 @@ st.divider()
 # Euron API configuration
 EURON_API_URL = "https://api.euron.one/api/v1/euri/alpha/chat/completions"
 EURON_MODEL = "gemini-2.5-pro-exp-03-25"
+
 # Access the API key from Streamlit secrets
 def get_euron_api_key():
     return st.secrets["euron"]["api_key"]
 
-def call_euron_api(messages, temperature=0.5, max_tokens=2000):
+def call_euron_api(messages, temperature=0.7, max_tokens=1000):
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {get_euron_api_key()}"
@@ -204,10 +207,11 @@ def generate_system_message(purpose="general"):
         return base_system_message + """
         For creating a meal plan:
         1. Create a 7-day meal plan with breakfast, lunch, and dinner options
-        2. Follow any dietary preferences and restrictions
+        2. Follow any dietary preferences, restrictions and cooking style
         3. Keep recipes appropriate to the skill level
-        4. Include variety across the week
-        5. Format your response as a JSON object with the following structure:
+        4. Include variety across the week\
+        5. If Nothing mentioned generate Bangladeshi style Recipes
+        6. Format your response as a JSON object with the following structure:
         {
             "monday": {
                 "breakfast": {"title": "Avocado Toast", "description": "Simple avocado toast with eggs", "prep_time": "15 minutes"},
@@ -230,7 +234,7 @@ def generate_system_message(purpose="general"):
 def extract_preferences(message):
     try:
         # Call Euron API to extract preferences
-        system_content = "You are a system that extracts cooking preferences from user messages. Extract any mentioned cooking style, dietary restrictions, or expertise level. Format as JSON with keys 'cooking_style', 'expertise_level', and 'dietary_restrictions' (array). Only respond with JSON."
+        system_content = "You are a system that extracts cooking preferences from user messages. Extract any mentioned cooking style, dietary restrictions, or expertise level. Format as JSON with keys 'cooking_style', 'expertise_level', and 'dietary_restrictions' (array). Only respond with JSON. Follow Bangladeshi Style by default if not mentioned in cooking style"
         
         messages = [
             {"role": "system", "content": system_content},
@@ -375,8 +379,8 @@ if st.session_state.current_tab == "Chat":
         with col1:
             cooking_style = st.selectbox(
                 "Cooking Style Preference",
-                ["General", "Italian", "Mexican", "Asian", "Mediterranean", "Indian", "French", "American", "Vegetarian", "Vegan"],
-                index=["General", "Italian", "Mexican", "Asian", "Mediterranean", "Indian", "French", "American", "Vegetarian", "Vegan"].index(st.session_state.user_preferences["cooking_style"])
+                ["General", "Bangladeshi", "Italian", "Mexican", "Asian", "Mediterranean", "Indian", "French", "American", "Vegetarian", "Vegan"],
+                index=["General", "Bangladeshi" "Italian", "Mexican", "Asian", "Mediterranean", "Indian", "French", "American", "Vegetarian", "Vegan"].index(st.session_state.user_preferences["cooking_style"])
             )
             
             if cooking_style != st.session_state.user_preferences["cooking_style"]:
