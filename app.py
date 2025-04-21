@@ -102,7 +102,7 @@ if 'user_preferences' not in st.session_state:
     }
 
 # Custom tab UI
-tabs = ["Help", "Chat", "Shopping List", "Meal Planning"]
+tabs = ["Chat", "Shopping List", "Meal Planning"]
 cols = st.columns(len(tabs))
 for i, tab in enumerate(tabs):
     with cols[i]:
@@ -116,7 +116,7 @@ st.divider()
 
 # Euron API configuration
 EURON_API_URL = "https://api.euron.one/api/v1/euri/alpha/chat/completions"
-EURON_MODEL = "gpt-4.1-nano"
+EURON_MODEL = "gemini-2.5-pro-exp-03-25"
 # Access the API key from Streamlit secrets
 def get_euron_api_key():
     return st.secrets["euron"]["api_key"]
