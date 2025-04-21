@@ -380,7 +380,7 @@ if st.session_state.current_tab == "Chat":
             cooking_style = st.selectbox(
                 "Cooking Style Preference",
                 ["General", "Bangladeshi", "Italian", "Mexican", "Asian", "Mediterranean", "Indian", "French", "American", "Vegetarian", "Vegan"],
-                index=["General", "Bangladeshi" "Italian", "Mexican", "Asian", "Mediterranean", "Indian", "French", "American", "Vegetarian", "Vegan"].index(st.session_state.user_preferences["cooking_style"])
+                index=["General", "Bangladeshi", "Italian", "Mexican", "Asian", "Mediterranean", "Indian", "French", "American", "Vegetarian", "Vegan"].index(st.session_state.user_preferences["cooking_style"])
             )
             
             if cooking_style != st.session_state.user_preferences["cooking_style"]:
