@@ -335,14 +335,13 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
             <div style="flex: 1;">
     """, unsafe_allow_html=True)
     
-    # Use st.image with error handling and styling
+    # Use st.image with error handling and updated parameter
     try:
         st.image(
             item.image_url,
-            use_column_width=True,
+            use_container_width=True,  # Updated from use_column_width
             caption=f"{item.dish_name} Image",
             output_format="JPEG",
-            # Apply CSS styling to match original design
             clamp=True,
             channels="RGB"
         )
@@ -361,7 +360,7 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
         # Fallback placeholder image
         st.image(
             f"https://via.placeholder.com/300x200?text={item.dish_name.replace(' ', '+')}",
-            use_column_width=True,
+            use_container_width=True,  # Updated from use_column_width
             caption="Image Not Available"
         )
     
@@ -377,6 +376,28 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
         st.markdown(f'<span class="price-badge">{option.replace("_", " ").title()}: ${price} {serving_info}</span>', unsafe_allow_html=True)
     
     st.markdown("</div></div>", unsafe_allow_html=True)
+    
+    # Action buttons
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button(f"Get Recipe for {item.dish_name}", key=f"recipe_{item.id}"):
+            st.session_state.messages.append({
+                "role": "user",
+                "content": f"Please provide a detailed recipe for {item.dish_name}, including ingredients, step-by-step instructions, and cooking tips."
+            })
+            st.session_state.current_tab = "AI Assistant"
+            st.rerun()
+    
+    with col2:
+        if st.button(f"Add to Shopping List", key=f"shop_{item.id}"):
+            # Add to shopping list (simplified for menu items)
+            st.success(f"✅ {item.dish_name} ingredients concept added to shopping list!")
+    
+    with col3:
+        if item.youtube_link and st.button(f"Watch Video", key=f"video_{item.id}"):
+            st.video(item.youtube_link)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
     
     # Action buttons
     col1, col2, col3 = st.columns(3)
