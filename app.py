@@ -1,12 +1,21 @@
+
 import streamlit as st
 import requests
-from datetime import datetime
 import json
 import pandas as pd
 import re
+from datetime import datetime
 from typing import Dict, List, Any
 import difflib
 from dataclasses import dataclass
+import logging
+
+# Set up logging
+logging.basicConfig(
+    filename="api_errors.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 # Page configuration
 st.set_page_config(
@@ -16,7 +25,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Darker theme styling with high-contrast text
+# Darker theme styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -219,10 +228,10 @@ class MenuItem:
 
 # Menu items database
 MENU_ITEMS = [
-    MenuItem(1, "Chicken Mandi", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Mandi.jpg", "https://youtube.com/embed/B3IV5P-4PCk?si=Ql_EWzyo6hhQ6mp1", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(1, "Chicken Mandi", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Mandi..jpg", "https://youtube.com/embed/B3IV5P-4PCk?si=Ql_EWzyo6hhQ6mp1", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(2, "Kabuli Pulao", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kabuli+Polao.jpg", "https://www.youtube.com/embed/ch8zl7V4ABo", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(3, "Chicken Dum Biryani", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Biryani.jpg", "https://www.youtube.com/embed/9CsloZe-ekI", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
-    MenuItem(4, "Kebab Platter", "Appetizer", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kabab+Platter.jpg", "https://www.youtube.com/embed/3ELfF5s8yz0", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(4, "Kebab Platter", "Appetizer", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kabab+Platter..jpg", "https://www.youtube.com/embed/3ELfF5s8yz0", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(5, "Chicken Kabsa", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Kabsa.jpg", "", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(6, "Chicken 65 Biryani", "Main", "Spicy", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+65+Biryani.jpg", "https://www.youtube.com/embed/jFh6NF7cVcE", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(7, "Chicken Kofta Biryani", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kofta+Biryani.jpg", "https://www.youtube.com/embed/Q1nDOX4lDuE", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
@@ -249,10 +258,10 @@ def validate_image_urls():
             response = requests.head(item.image_url, timeout=5)
             if response.status_code != 200:
                 item.image_url = f"https://via.placeholder.com/300x200?text={item.dish_name.replace(' ', '+')}"
-                print(f"Replaced URL for {item.dish_name} with placeholder due to status {response.status_code}")
+                logging.info(f"Replaced URL for {item.dish_name} with placeholder due to status {response.status_code}")
         except Exception as e:
             item.image_url = f"https://via.placeholder.com/300x200?text={item.dish_name.replace(' ', '+')}"
-            print(f"Error for {item.dish_name}: {str(e)} - Replaced with placeholder")
+            logging.error(f"Error for {item.dish_name}: {str(e)} - Replaced with placeholder")
 
 # Run URL validation at startup
 validate_image_urls()
@@ -288,15 +297,27 @@ st.markdown("""
 
 # API Configuration
 EURON_API_URL = "https://api.euron.one/api/v1/euri/alpha/chat/completions"
-EURON_MODEL = "gemini-2.5-pro-exp-03-25"
+EURON_MODEL = "gpt-4.1-mini"
 
 def get_euron_api_key():
-    return st.secrets["euron"]["api_key"]
+    try:
+        api_key = st.secrets["euron"]["api_key"]
+        if not api_key:
+            raise KeyError("API key is empty")
+        return api_key
+    except (KeyError, TypeError) as e:
+        logging.error(f"Failed to load API key: {str(e)}")
+        return None
 
 def call_euron_api(messages, temperature=0.7, max_tokens=1000):
+    api_key = get_euron_api_key()
+    if not api_key:
+        logging.error("No API key available")
+        return "Error: API key not configured. Please check your Streamlit secrets."
+    
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {get_euron_api_key()}"
+        "Authorization": f"Bearer {api_key}"
     }
     payload = {
         "messages": messages,
@@ -304,17 +325,40 @@ def call_euron_api(messages, temperature=0.7, max_tokens=1000):
         "max_tokens": max_tokens,
         "temperature": temperature
     }
+    logging.info(f"Sending API request: {json.dumps(payload, indent=2)}")
+    
     try:
-        response = requests.post(EURON_API_URL, headers=headers, json=payload)
+        response = requests.post(EURON_API_URL, headers=headers, json=payload, timeout=5)
         response.raise_for_status()
         data = response.json()
+        logging.info(f"API response: {json.dumps(data, indent=2)}")
+        
+        # Flexible response parsing
         if 'choices' in data and len(data['choices']) > 0:
-            if 'message' in data['choices'][0] and 'content' in data['choices'][0]['message']:
-                return data['choices'][0]['message']['content']
-        return "I'm sorry, I couldn't process that request."
+            choice = data['choices'][0]
+            if 'message' in choice and 'content' in choice['message']:
+                return choice['message']['content'].strip()
+            elif 'text' in choice:
+                return choice['text'].strip()
+            elif 'content' in choice:
+                return choice['content'].strip()
+        logging.warning("No valid content found in API response")
+        return "Error: No valid response content from API."
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"HTTP error: {str(e)} - Status: {e.response.status_code} - Response: {e.response.text}")
+        return f"Error: HTTP {e.response.status_code} - {e.response.text}"
+    except requests.exceptions.Timeout:
+        logging.error("Request timed out after 5 seconds")
+        return "Error: API request timed out."
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Request error: {str(e)}")
+        return f"Error: Failed to connect to API - {str(e)}"
+    except ValueError as e:
+        logging.error(f"JSON decode error: {str(e)} - Response: {response.text}")
+        return "Error: Invalid API response format."
     except Exception as e:
-        print(f"API error: {str(e)}")
-        return f"Error: {str(e)}"
+        logging.error(f"Unexpected error: {str(e)}")
+        return f"Error: Unexpected issue - {str(e)}"
 
 # Smart menu search
 def smart_menu_search(query: str, limit: int = 3) -> List[MenuItem]:
@@ -520,6 +564,12 @@ if st.session_state.current_tab == "AI Assistant":
                 "serving_size": serving_size
             })
             st.success("✅ Preferences updated!")
+    
+    with st.expander("🔍 Debug API Status", expanded=False):
+        st.write("API call details will appear here after a query.")
+        if 'last_api_status' in st.session_state:
+            st.markdown(f"**Last API Call Status**: {st.session_state.last_api_status}")
+    
     if not st.session_state.messages:
         st.markdown("""
         ## 👋 Welcome to Shared Skillet AI Professional!
@@ -539,9 +589,11 @@ if st.session_state.current_tab == "AI Assistant":
             "role": "assistant",
             "content": "Hello! I'm your Shared Skillet AI assistant. I specialize in authentic Bangladeshi and South Asian cuisine, and I have access to our curated menu of professional dishes. What would you like to cook today? 🍳"
         })
+    
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
+    
     prompt = st.chat_input("Ask about our menu, get recipes, or culinary advice...")
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -557,10 +609,27 @@ if st.session_state.current_tab == "AI Assistant":
                         with cols[idx]:
                             display_menu_item(item, show_video=False)
                     st.markdown("---")
-                    st.markdown("### 👨‍🍳 AI-Powered Response:")
-                    system_message = generate_enhanced_system_message(purpose="recipe_request", relevant_menu_items=relevant_items)
-                    api_messages = [{"role": "system", "content": system_message}, {"role": "user", "content": prompt}]
-                    response = call_euron_api(api_messages)
+                
+                st.markdown("### 👨‍🍳 AI-Powered Response:")
+                system_message = generate_enhanced_system_message(purpose="recipe_request", relevant_menu_items=relevant_items)
+                api_messages = [{"role": "system", "content": system_message}, {"role": "user", "content": prompt}]
+                response = call_euron_api(api_messages)
+                
+                # Log API status
+                if response.startswith("Error:"):
+                    st.session_state.last_api_status = response
+                    st.warning(response)
+                    # Fallback response using smart_menu_search
+                    if relevant_items:
+                        fallback = f"Sorry, I couldn't fetch a detailed response. Based on your query, I recommend checking out these dishes from our menu:\n"
+                        fallback += "\n".join([f"- **{item.dish_name}**: {item.category}, {item.taste_category}" for item in relevant_items])
+                        st.markdown(fallback)
+                        st.session_state.messages.append({"role": "assistant", "content": fallback})
+                    else:
+                        st.markdown("No relevant menu items found. Please try a different query.")
+                        st.session_state.messages.append({"role": "assistant", "content": "No relevant menu items found. Please try a different query."})
+                else:
+                    st.session_state.last_api_status = "Success: API returned valid response"
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                     st.session_state.recommended_items = relevant_items
@@ -628,10 +697,14 @@ elif st.session_state.current_tab == "Meal Planning":
             """
             api_messages = [{"role": "system", "content": system_message}, {"role": "user", "content": prompt}]
             response = call_euron_api(api_messages)
-            st.session_state.meal_plan = {"plan": response}
-            st.markdown('<div class="meal-plan">', unsafe_allow_html=True)
-            st.markdown(response)
-            st.markdown('</div>', unsafe_allow_html=True)
+            if response.startswith("Error:"):
+                st.warning(response)
+                st.session_state.meal_plan = {"plan": "Failed to generate meal plan due to API error."}
+            else:
+                st.session_state.meal_plan = {"plan": response}
+                st.markdown('<div class="meal-plan">', unsafe_allow_html=True)
+                st.markdown(response)
+                st.markdown('</div>', unsafe_allow_html=True)
     if st.session_state.meal_plan.get("plan"):
         st.markdown('<div class="meal-plan">', unsafe_allow_html=True)
         st.markdown("### Current Meal Plan")
@@ -669,15 +742,18 @@ elif st.session_state.current_tab == "Smart Recommendations":
                 """
                 api_messages = [{"role": "system", "content": system_message}, {"role": "user", "content": prompt}]
                 response = call_euron_api(api_messages)
-                new_dish_names = re.findall(r'\b[\w\s]+\b', response)
-                new_recommendations = []
-                for dish_name in new_dish_names:
-                    for item in MENU_ITEMS:
-                        if dish_name.lower() in item.dish_name.lower() and item not in st.session_state.recommended_items:
-                            new_recommendations.append(item)
-                            break
-                if new_recommendations:
-                    st.session_state.recommended_items.extend(new_recommendations[:3])
-                    st.rerun()
+                if response.startswith("Error:"):
+                    st.warning(response)
                 else:
-                    st.warning("No new recommendations found. Try adjusting your preferences!")
+                    new_dish_names = re.findall(r'\b[\w\s]+\b', response)
+                    new_recommendations = []
+                    for dish_name in new_dish_names:
+                        for item in MENU_ITEMS:
+                            if dish_name.lower() in item.dish_name.lower() and item not in st.session_state.recommended_items:
+                                new_recommendations.append(item)
+                                break
+                    if new_recommendations:
+                        st.session_state.recommended_items.extend(new_recommendations[:3])
+                        st.rerun()
+                    else:
+                        st.warning("No new recommendations found. Try adjusting your preferences!")
