@@ -18,22 +18,27 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Enhanced styling with modern design
+# Darker theme styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
     .main {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: linear-gradient(135deg, #1e1e2e 0%, #3e3e5e 100%);
         font-family: 'Inter', sans-serif;
-        color: #2c3e50;
+        color: #e0e0e0;
     }
     
     .stTextInput, .stTextArea, .stSelectbox {
-        background-color: #ffffff;
+        background-color: #2a2a3a;
         border-radius: 12px;
-        border: 2px solid #e9ecef;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border: 2px solid #3c3c4c;
+        color: #e0e0e0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    
+    .stTextInput > div > div > input, .stTextArea > div > div > textarea, .stSelectbox > div > div > select {
+        color: #e0e0e0 !important;
     }
     
     .chat-message {
@@ -42,29 +47,29 @@ st.markdown("""
         margin-bottom: 1rem;
         display: flex;
         flex-direction: column;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         backdrop-filter: blur(10px);
     }
     
     .chat-message.user {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, #5a5af5 0%, #8a5af5 100%);
+        color: #ffffff;
         margin-left: 20%;
     }
     
     .chat-message.assistant {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+        color: #ffffff;
         margin-right: 20%;
     }
     
     .menu-item-card {
-        background: white;
+        background: #2a2a3a;
         padding: 20px;
         border-radius: 16px;
         margin: 10px 0;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        border: 1px solid #e9ecef;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        border: 1px solid #3c3c4c;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
@@ -72,7 +77,7 @@ st.markdown("""
     
     .menu-item-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.4);
     }
     
     .menu-item-card::before {
@@ -82,12 +87,12 @@ st.markdown("""
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: linear-gradient(90deg, #5a5af5, #8a5af5);
     }
     
     .price-badge {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, #5a5af5 0%, #8a5af5 100%);
+        color: #ffffff;
         padding: 8px 16px;
         border-radius: 20px;
         font-weight: 600;
@@ -96,8 +101,8 @@ st.markdown("""
     }
     
     .category-badge {
-        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-        color: #d84315;
+        background: linear-gradient(135deg, #ff9a9e 0%, #ff6b6b 100%);
+        color: #ffffff;
         padding: 6px 12px;
         border-radius: 15px;
         font-size: 0.8em;
@@ -107,48 +112,50 @@ st.markdown("""
     }
     
     .shopping-list {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         padding: 20px;
         border-radius: 16px;
-        border-left: 5px solid #4CAF50;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-left: 5px solid #00c851;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        color: #ffffff;
     }
     
     .meal-plan {
-        background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+        background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
         padding: 20px;
         border-radius: 16px;
-        border-left: 5px solid #FF9800;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-left: 5px solid #ff4444;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        color: #ffffff;
     }
     
     .tab-container {
-        background: white;
+        background: #2a2a3a;
         border-radius: 16px;
         padding: 5px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
     
     .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, #5a5af5 0%, #8a5af5 100%);
+        color: #ffffff;
         border: none;
         border-radius: 12px;
         padding: 12px 24px;
         font-weight: 600;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 15px rgba(90, 90, 245, 0.4);
     }
     
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        box-shadow: 0 6px 20px rgba(90, 90, 245, 0.6);
     }
     
     .ai-badge {
-        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-        color: white;
+        background: linear-gradient(45deg, #ff4444, #00c851);
+        color: #ffffff;
         padding: 4px 8px;
         border-radius: 8px;
         font-size: 0.7em;
@@ -159,11 +166,11 @@ st.markdown("""
     .professional-header {
         text-align: center;
         padding: 2rem 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #5a5af5 0%, #8a5af5 100%);
         border-radius: 20px;
         margin-bottom: 2rem;
-        color: white;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        color: #ffffff;
+        box-shadow: 0 10px 30px rgba(90, 90, 245, 0.3);
     }
     
     /* Hide hamburger menu and footer */
@@ -180,11 +187,17 @@ st.markdown("""
     }
     
     .smart-suggestion {
-        background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        background: linear-gradient(135deg, #00c851 0%, #007e33 100%);
         padding: 15px;
         border-radius: 12px;
         margin: 10px 0;
-        border-left: 4px solid #00c851;
+        border-left: 4px solid #00f2fe;
+        color: #ffffff;
+    }
+    
+    /* Ensure text colors for markdown and headers */
+    h1, h2, h3, h4, h5, h6, p, li {
+        color: #e0e0e0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -346,17 +359,18 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
         <div style="display: flex; align-items: center; margin-bottom: 15px;">
             <h3 style="margin: 0; flex-grow: 1;">{item.dish_name}</h3>
             <span class="category-badge">{item.category}</span>
-            <span class="category-badge" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #ad1457;">{item.taste_category}</span>
+            <span class="category-badge" style="background: linear-gradient(135deg, #ff9a9e 0%, #ff6b6b 100%); color: #ffffff;">{item.taste_category}</span>
         </div>
         <div style="display: flex; gap: 20px;">
-            <div style="flex: 1;">
+            <div style="flex: 1; max-width: 300px;">
     """, unsafe_allow_html=True)
     
-    # Use st.image with error handling and updated parameter
+    # Use st.image with error handling and box-style display
     try:
         st.image(
             item.image_url,
-            use_container_width=True,
+            use_container_width=False,
+            width=300,
             caption=f"{item.dish_name} Image",
             output_format="JPEG",
             clamp=True,
@@ -364,11 +378,15 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
         )
         st.markdown("""
         <style>
-            img {
+            .menu-item-card img {
+                width: 100%;
+                max-width: 300px;
                 height: 200px;
                 object-fit: cover;
                 border-radius: 12px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                display: block;
+                margin: 0 auto;
             }
         </style>
         """, unsafe_allow_html=True)
@@ -377,9 +395,24 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
         # Fallback placeholder image
         st.image(
             f"https://via.placeholder.com/300x200?text={item.dish_name.replace(' ', '+')}",
-            use_container_width=True,
+            use_container_width=False,
+            width=300,
             caption="Image Not Available"
         )
+        st.markdown("""
+        <style>
+            .menu-item-card img {
+                width: 100%;
+                max-width: 300px;
+                height: 200px;
+                object-fit: cover;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                display: block;
+                margin: 0 auto;
+            }
+        </style>
+        """, unsafe_allow_html=True)
     
     st.markdown("""
             </div>
