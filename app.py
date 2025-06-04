@@ -1,4 +1,4 @@
-```python
+
 import streamlit as st
 import requests
 import json
@@ -780,4 +780,4 @@ elif st.session_state.current_tab == "Smart Recommendations":
                         st.rerun()
                     else:
                         st.warning("No new recommendations found. Try adjusting your preferences!")
-```
+
