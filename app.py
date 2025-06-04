@@ -323,7 +323,7 @@ def smart_menu_search(query: str, limit: int = 3) -> List[MenuItem]:
     return [item[0] for item in scored_items[:limit]]
 
 def display_menu_item(item: MenuItem, show_video: bool = True):
-    """Display a menu item with enhanced styling"""
+    """Display a menu item with enhanced styling and robust image handling"""
     st.markdown(f"""
     <div class="menu-item-card">
         <div style="display: flex; align-items: center; margin-bottom: 15px;">
@@ -331,10 +331,41 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
             <span class="category-badge">{item.category}</span>
             <span class="category-badge" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #ad1457;">{item.taste_category}</span>
         </div>
-        
         <div style="display: flex; gap: 20px;">
             <div style="flex: 1;">
-                <img src="{item.image_url}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);" />
+    """, unsafe_allow_html=True)
+    
+    # Use st.image with error handling and styling
+    try:
+        st.image(
+            item.image_url,
+            use_column_width=True,
+            caption=f"{item.dish_name} Image",
+            output_format="JPEG",
+            # Apply CSS styling to match original design
+            clamp=True,
+            channels="RGB"
+        )
+        st.markdown("""
+        <style>
+            img {
+                height: 200px;
+                object-fit: cover;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            }
+        </style>
+        """, unsafe_allow_html=True)
+    except Exception as e:
+        st.warning(f"Failed to load image for {item.dish_name}: {str(e)}")
+        # Fallback placeholder image
+        st.image(
+            f"https://via.placeholder.com/300x200?text={item.dish_name.replace(' ', '+')}",
+            use_column_width=True,
+            caption="Image Not Available"
+        )
+    
+    st.markdown("""
             </div>
             <div style="flex: 1;">
                 <h4>Pricing Options:</h4>
