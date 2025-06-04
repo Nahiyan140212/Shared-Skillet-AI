@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import os
 import requests
@@ -205,7 +206,7 @@ MENU_ITEMS = [
     MenuItem(1, "Chicken Mandi", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Mandi.jpg", "https://youtube.com/embed/B3IV5P-4PCk?si=Ql_EWzyo6hhQ6mp1", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(2, "Kabuli Pulao", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kabuli+Polao.jpg", "https://www.youtube.com/embed/ch8zl7V4ABo", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(3, "Chicken Dum Biryani", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Biryani.jpg", "https://www.youtube.com/embed/9CsloZe-ekI", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
-    MenuItem(4, "Kebab Platter", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kabab+Platter.jpg", "https://www.youtube.com/embed/3ELfF5s8yz0", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(4, "Kebab Platter", "Appetizer", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kabab+Platter.jpg", "https://www.youtube.com/embed/3ELfF5s8yz0", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(5, "Chicken Kabsa", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Kabsa.jpg", "", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(6, "Chicken 65 Biryani", "Main", "Spicy", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+65+Biryani.jpg", "https://www.youtube.com/embed/jFh6NF7cVcE", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
     MenuItem(7, "Chicken Kofta Biryani", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kofta+Biryani.jpg", "https://www.youtube.com/embed/Q1nDOX4lDuE", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
@@ -223,6 +224,22 @@ MENU_ITEMS = [
     MenuItem(19, "Mango Lassi", "Drinks", "Sweet", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Mango+Lassi.jpg", "", {"per glass": 4}, {}),
     MenuItem(20, "Mint Lemon", "Drinks", "Sweet", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Mint+Lemon.jpg", "", {"per glass": 2}, {})
 ]
+
+# Validate image URLs to ensure they are accessible
+@st.cache_data
+def validate_image_urls():
+    for item in MENU_ITEMS:
+        try:
+            response = requests.head(item.image_url, timeout=5)
+            if response.status_code != 200:
+                item.image_url = f"https://via.placeholder.com/300x200?text={item.dish_name.replace(' ', '+')}"
+                print(f"Replaced URL for {item.dish_name} with placeholder")
+        except Exception as e:
+            item.image_url = f"https://via.placeholder.com/300x200?text={item.dish_name.replace(' ', '+')}"
+            print(f"Error for {item.dish_name}: {str(e)} - Replaced with placeholder")
+
+# Run URL validation at startup
+validate_image_urls()
 
 # Initialize session state variables
 if 'messages' not in st.session_state:
@@ -255,7 +272,7 @@ st.markdown("""
 
 # API Configuration
 EURON_API_URL = "https://api.euron.one/api/v1/euri/alpha/chat/completions"
-EURON_MODEL = "gpt-4.1-mini"
+EURON_MODEL = "gemini-2.5-pro-exp-03-25"
 
 def get_euron_api_key():
     return st.secrets["euron"]["api_key"]
@@ -339,7 +356,7 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
     try:
         st.image(
             item.image_url,
-            use_container_width=True,  # Updated from use_column_width
+            use_container_width=True,
             caption=f"{item.dish_name} Image",
             output_format="JPEG",
             clamp=True,
@@ -360,7 +377,7 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
         # Fallback placeholder image
         st.image(
             f"https://via.placeholder.com/300x200?text={item.dish_name.replace(' ', '+')}",
-            use_container_width=True,  # Updated from use_column_width
+            use_container_width=True,
             caption="Image Not Available"
         )
     
@@ -391,28 +408,7 @@ def display_menu_item(item: MenuItem, show_video: bool = True):
     with col2:
         if st.button(f"Add to Shopping List", key=f"shop_{item.id}"):
             # Add to shopping list (simplified for menu items)
-            st.success(f"✅ {item.dish_name} ingredients concept added to shopping list!")
-    
-    with col3:
-        if item.youtube_link and st.button(f"Watch Video", key=f"video_{item.id}"):
-            st.video(item.youtube_link)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-    # Action buttons
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button(f"Get Recipe for {item.dish_name}", key=f"recipe_{item.id}"):
-            st.session_state.messages.append({
-                "role": "user",
-                "content": f"Please provide a detailed recipe for {item.dish_name}, including ingredients, step-by-step instructions, and cooking tips."
-            })
-            st.session_state.current_tab = "AI Assistant"
-            st.rerun()
-    
-    with col2:
-        if st.button(f"Add to Shopping List", key=f"shop_{item.id}"):
-            # Add to shopping list (simplified for menu items)
+            st.session_state.shopping_list[item.dish_name] = [f"Ingredients for {item.dish_name} (to be detailed)"]
             st.success(f"✅ {item.dish_name} ingredients concept added to shopping list!")
     
     with col3:
@@ -621,6 +617,16 @@ elif st.session_state.current_tab == "Menu Explorer":
     st.markdown("## 📋 Menu Explorer")
     st.markdown("Explore our curated selection of authentic Bangladeshi and South Asian dishes.")
     
+    # Debug: Display image URL statuses
+    with st.expander("Debug: Image URL Status", expanded=False):
+        st.markdown("### Image URL Status")
+        for item in MENU_ITEMS:
+            try:
+                response = requests.head(item.image_url, timeout=5)
+                st.write(f"{item.dish_name}: {response.status_code} - {'Accessible' if response.status_code == 200 else 'Inaccessible'}")
+            except Exception as e:
+                st.write(f"{item.dish_name}: Error - {str(e)}")
+    
     # Search and filter options
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
@@ -757,3 +763,4 @@ elif st.session_state.current_tab == "Smart Recommendations":
                     st.rerun()
                 else:
                     st.warning("No new recommendations found. Try adjusting your preferences!")
+```
