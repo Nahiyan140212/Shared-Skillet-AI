@@ -5,66 +5,224 @@ from datetime import datetime, timedelta
 import json
 import pandas as pd
 import re
+from typing import Dict, List, Any, Optional
+import difflib
+from dataclasses import dataclass
 
 # Page configuration
 st.set_page_config(
-    page_title="Shared Skillet AI",
+    page_title="Shared Skillet AI - Professional Kitchen Assistant",
     page_icon="🍳",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Streamlit UI styling
+# Enhanced styling with modern design
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
     .main {
-        background-color: #f9f7f1;
-        color: #333333;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        font-family: 'Inter', sans-serif;
+        color: #2c3e50;
     }
-    .stTextInput, .stTextArea {
+    
+    .stTextInput, .stTextArea, .stSelectbox {
         background-color: #ffffff;
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
+    
     .chat-message {
         padding: 1.5rem;
-        border-radius: 0.5rem;
+        border-radius: 16px;
         margin-bottom: 1rem;
         display: flex;
         flex-direction: column;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        backdrop-filter: blur(10px);
     }
+    
     .chat-message.user {
-        background-color: #f0f0f0;
-        border-left: 5px solid #FF9776;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin-left: 20%;
     }
+    
     .chat-message.assistant {
-        background-color: #e6f7ff;
-        border-left: 5px solid #2E7D32;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        margin-right: 20%;
     }
-    .chat-message p {
-        margin: 0;
+    
+    .menu-item-card {
+        background: white;
+        padding: 20px;
+        border-radius: 16px;
+        margin: 10px 0;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
+    
+    .menu-item-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    }
+    
+    .menu-item-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+    
+    .price-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        display: inline-block;
+        margin: 5px;
+    }
+    
+    .category-badge {
+        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        color: #d84315;
+        padding: 6px 12px;
+        border-radius: 15px;
+        font-size: 0.8em;
+        font-weight: 500;
+        display: inline-block;
+        margin: 5px;
+    }
+    
     .shopping-list {
-        background-color: #f5f5f5;
-        padding: 15px;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        padding: 20px;
+        border-radius: 16px;
         border-left: 5px solid #4CAF50;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
+    
     .meal-plan {
-        background-color: #fff8e1;
-        padding: 15px;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+        padding: 20px;
+        border-radius: 16px;
         border-left: 5px solid #FF9800;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-    .recipe-card {
-        background-color: white;
-        padding: 10px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-        border: 1px solid #ddd;
+    
+    .tab-container {
+        background: white;
+        border-radius: 16px;
+        padding: 5px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
+    
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+    
+    .ai-badge {
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 0.7em;
+        font-weight: bold;
+        margin-left: 8px;
+    }
+    
+    .professional-header {
+        text-align: center;
+        padding: 2rem 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        color: white;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+    
     /* Hide hamburger menu and footer */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    .video-container {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+    
+    .smart-suggestion {
+        background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        padding: 15px;
+        border-radius: 12px;
+        margin: 10px 0;
+        border-left: 4px solid #00c851;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# Data class for menu items
+@dataclass
+class MenuItem:
+    id: int
+    dish_name: str
+    category: str
+    taste_category: str
+    image_url: str
+    youtube_link: str
+    pricing: Dict[str, float]
+    serving_info: Dict[str, str]
+
+# Your menu items database
+MENU_ITEMS = [
+    MenuItem(1, "Chicken Mandi", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Mandi..jpg", "https://youtube.com/embed/B3IV5P-4PCk?si=Ql_EWzyo6hhQ6mp1", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(2, "Kabuli Pulao", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kabuli+Polao.jpg", "https://www.youtube.com/embed/ch8zl7V4ABo", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(3, "Chicken Dum Biryani", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Biryani.jpg", "https://www.youtube.com/embed/9CsloZe-ekI", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(4, "Kebab Platter", "Appetizer", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kabab+Platter..jpg", "https://www.youtube.com/embed/3ELfF5s8yz0", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(5, "Chicken Kabsa", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Kabsa.jpg", "", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(6, "Chicken 65 Biryani", "Main", "Spicy", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+65+Biryani.jpg", "https://www.youtube.com/embed/jFh6NF7cVcE", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(7, "Chicken Kofta Biryani", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Kofta+Biryani.jpg", "https://www.youtube.com/embed/Q1nDOX4lDuE", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(8, "Beef Dum Biryani", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Beef+Dum+Biryani.jpg", "https://www.youtube.com/embed/qkiMa9Bke0M", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(9, "Dubai Cheese Cake", "Dessert", "Sweet", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Dubai+Cheese+Cake.jpg", "https://www.youtube.com/embed/tVJtZBSp3Hw&t", {"full_tray": 94.99, "half_tray": 54.99, "per_serving": 7.99}, {"full_tray": "28-30 people", "half_tray": "12-15 people"}),
+    MenuItem(10, "Tiramisu", "Dessert", "Sweet", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Tiramisu.jpg", "https://www.youtube.com/embed/ens-bJaLuQQ", {"full_tray": 89.99, "half_tray": 49.99, "per_serving": 6.99}, {"full_tray": "28-30 people", "half_tray": "12-15 people"}),
+    MenuItem(11, "Mango Tiramisu", "Dessert", "Sweet", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Mango+Tiramisu.jpg", "https://drive.google.com/file/d/16rZwh15xVDdm2RE8LseEpjqSrCFdWPJi/preview", {"full_tray": 89.99, "half_tray": 49.99, "per_serving": 6.99}, {"full_tray": "28-30 people", "half_tray": "12-15 people"}),
+    MenuItem(12, "Butter Pound Cake", "Dessert", "Sweet", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Pound+Cake.jpg", "https://www.youtube.com/embed/luaEFTC78aQ", {"Whole Cake": 7.99}, {}),
+    MenuItem(13, "Malai Sheek Kebab (Beef/Chicken)", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Malai+Sheek+Kebab.jpg", "https://www.youtube.com/embed/3Ci1Jr8cWn8&t", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(14, "Egg Potato Cutlet", "Appetizer", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Egg+Potato+Cutlet.jpg", "https://www.youtube.com/embed/LjSN5QtdLmE", {"per count": 3.99}, {}),
+    MenuItem(15, "Shahi Malai Jorda", "Dessert", "Sweet", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Shahi+Malai+Jorda.jpg", "https://www.youtube.com/embed/GXS3UHmB6NM", {"full_tray": 90, "half_tray": 50, "per_serving": 9.99}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(16, "Beef Tehari", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Beef+Tehari.jpg", "https://www.youtube.com/embed/3wwr5nW6af0", {"full_tray": 90, "half_tray": 39.99, "per_serving": 9.99}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(17, "Chicken Roast", "Main", "Savory", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Chicken+Roast.jpg", "https://www.youtube.com/embed/P56bYJXx8Ak", {"full_tray": 90, "half_tray": 50, "per_serving": 12}, {"full_tray": "15-17 people", "half_tray": "5-6 people"}),
+    MenuItem(18, "Pina colada (Non Alcoholic)", "Drinks", "Sweet and Refreshing", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Pina+Colada.jpg", "", {"per glass": 3}, {}),
+    MenuItem(19, "Mango Lassi", "Drinks", "Sweet", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Mango+Lassi.jpg", "", {"per glass": 4}, {}),
+    MenuItem(20, "Mint Lemon", "Drinks", "Sweet", "https://s3.us-east-1.amazonaws.com/sharedskillet.com/Mint+Lemon.jpg", "", {"per glass": 2}, {})
+]
 
 # Initialize session state variables
 if 'messages' not in st.session_state:
@@ -74,51 +232,31 @@ if 'shopping_list' not in st.session_state:
 if 'meal_plan' not in st.session_state:
     st.session_state.meal_plan = {}
 if 'current_tab' not in st.session_state:
-    st.session_state.current_tab = "Help"
-    st.markdown("""
-    ## 👨‍🍳 How to Use Shared Skillet AI
-
-    Shared Skillet AI is your virtual kitchen buddy. Just type like you're chatting with a friend, and it can help you:
-
-    - 🍽️ Suggest recipes using ingredients you have
-    - 🧠 Answer cooking questions or give tips
-    - 🛒 Build and manage your shopping list
-    - 🗓️ Create a full 7-day meal plan tailored to your diet and skill level
-
-    ### 🟢 Try asking:
-    - "Give me a vegetarian pasta recipe."
-    - "What can I make with chicken, tomatoes, and rice?"
-    - "Add this recipe to my shopping list."
-    - "Create a weekly keto meal plan for a beginner."
-
-    Switch between tabs to access your **Chat**, **Shopping List**, or **Meal Plan** at any time.
-    """)
+    st.session_state.current_tab = "AI Assistant"
 if 'user_preferences' not in st.session_state:
-    # Default preferences - you can customize these
     st.session_state.user_preferences = {
-        "cooking_style": "General",
-        "expertise_level": "Intermediate",
-        "dietary_restrictions": []
+        "cooking_style": "Bangladeshi",
+        "expertise_level": "Intermediate", 
+        "dietary_restrictions": [],
+        "spice_level": "Medium",
+        "serving_size": "4-6 people"
     }
+if 'recommended_items' not in st.session_state:
+    st.session_state.recommended_items = []
 
-# Custom tab UI
-tabs = ["Chat", "Shopping List", "Meal Planning"]
-cols = st.columns(len(tabs))
-for i, tab in enumerate(tabs):
-    with cols[i]:
-        if st.button(tab, key=f"tab_{tab}", use_container_width=True):
-            st.session_state.current_tab = tab
-            st.rerun()
+# Professional header
+st.markdown("""
+<div class="professional-header">
+    <h1>🍳 Shared Skillet AI</h1>
+    <h3>Professional Kitchen Assistant with Smart Menu Integration</h3>
+    <p>Powered by Advanced AI • Curated Menu • Personalized Experience</p>
+</div>
+""", unsafe_allow_html=True)
 
-# Show current tab
-st.markdown(f"## {st.session_state.current_tab}")
-st.divider()
-
-# Euron API configuration
+# API Configuration
 EURON_API_URL = "https://api.euron.one/api/v1/euri/alpha/chat/completions"
 EURON_MODEL = "gemini-2.5-pro-exp-03-25"
 
-# Access the API key from Streamlit secrets
 def get_euron_api_key():
     return st.secrets["euron"]["api_key"]
 
@@ -137,9 +275,8 @@ def call_euron_api(messages, temperature=0.7, max_tokens=1000):
     
     try:
         response = requests.post(EURON_API_URL, headers=headers, json=payload)
-        response.raise_for_status()  # Raise an exception for HTTP errors
+        response.raise_for_status()
         data = response.json()
-        # Extract content based on Euron API response structure
         if 'choices' in data and len(data['choices']) > 0:
             if 'message' in data['choices'][0] and 'content' in data['choices'][0]['message']:
                 return data['choices'][0]['message']['content']
@@ -148,550 +285,423 @@ def call_euron_api(messages, temperature=0.7, max_tokens=1000):
         print(f"API error: {str(e)}")
         return f"Error: {str(e)}"
 
-# Function to generate system message based on preferences
-def generate_system_message(purpose="general"):
-    current_date = datetime.now().strftime("%Y-%m-%d")
+# Smart menu search and recommendation system
+def smart_menu_search(query: str, limit: int = 3) -> List[MenuItem]:
+    """AI-powered menu search with fuzzy matching"""
+    query_lower = query.lower()
+    scored_items = []
     
-    # Use stored preferences
+    for item in MENU_ITEMS:
+        score = 0
+        # Direct name matching
+        if query_lower in item.dish_name.lower():
+            score += 100
+        
+        # Category matching
+        if query_lower in item.category.lower():
+            score += 50
+            
+        # Taste category matching
+        if query_lower in item.taste_category.lower():
+            score += 30
+            
+        # Fuzzy matching for dish names
+        similarity = difflib.SequenceMatcher(None, query_lower, item.dish_name.lower()).ratio()
+        score += similarity * 40
+        
+        # Keywords matching
+        keywords = ['chicken', 'beef', 'biryani', 'kebab', 'dessert', 'drink', 'cake', 'spicy', 'sweet', 'savory']
+        for keyword in keywords:
+            if keyword in query_lower and keyword in item.dish_name.lower():
+                score += 25
+        
+        if score > 20:  # Threshold for relevance
+            scored_items.append((item, score))
+    
+    # Sort by score and return top items
+    scored_items.sort(key=lambda x: x[1], reverse=True)
+    return [item[0] for item in scored_items[:limit]]
+
+def display_menu_item(item: MenuItem, show_video: bool = True):
+    """Display a menu item with enhanced styling"""
+    st.markdown(f"""
+    <div class="menu-item-card">
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; flex-grow: 1;">{item.dish_name}</h3>
+            <span class="category-badge">{item.category}</span>
+            <span class="category-badge" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #ad1457;">{item.taste_category}</span>
+        </div>
+        
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 1;">
+                <img src="{item.image_url}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);" />
+            </div>
+            <div style="flex: 1;">
+                <h4>Pricing Options:</h4>
+    """, unsafe_allow_html=True)
+    
+    # Display pricing
+    for option, price in item.pricing.items():
+        serving_info = item.serving_info.get(option, "")
+        st.markdown(f'<span class="price-badge">{option.replace("_", " ").title()}: ${price} {serving_info}</span>', unsafe_allow_html=True)
+    
+    st.markdown("</div></div>", unsafe_allow_html=True)
+    
+    # Action buttons
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button(f"Get Recipe for {item.dish_name}", key=f"recipe_{item.id}"):
+            st.session_state.messages.append({
+                "role": "user",
+                "content": f"Please provide a detailed recipe for {item.dish_name}, including ingredients, step-by-step instructions, and cooking tips."
+            })
+            st.session_state.current_tab = "AI Assistant"
+            st.rerun()
+    
+    with col2:
+        if st.button(f"Add to Shopping List", key=f"shop_{item.id}"):
+            # Add to shopping list (simplified for menu items)
+            st.success(f"✅ {item.dish_name} ingredients concept added to shopping list!")
+    
+    with col3:
+        if item.youtube_link and st.button(f"Watch Video", key=f"video_{item.id}"):
+            st.video(item.youtube_link)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+
+def generate_enhanced_system_message(purpose="general", relevant_menu_items=None):
+    """Generate enhanced system message with menu awareness"""
+    current_date = datetime.now().strftime("%Y-%m-%d")
     prefs = st.session_state.user_preferences
-    cooking_style = prefs["cooking_style"]
-    expertise_level = prefs["expertise_level"]
-    diet_string = ", ".join(prefs["dietary_restrictions"]) if prefs["dietary_restrictions"] else "No specific dietary restrictions"
+    
+    menu_context = ""
+    if relevant_menu_items:
+        menu_context = f"""
+        
+        PRIORITY MENU ITEMS (Always suggest these first when relevant):
+        {chr(10).join([f"- {item.dish_name} ({item.category}, {item.taste_category})" for item in relevant_menu_items])}
+        
+        These are authentic, professional dishes from Shared Skillet. Always prioritize recommending these items when they match the user's request.
+        """
     
     base_system_message = f"""
-    You are a specialized cooking assistant with expertise in various cuisines and cooking techniques. 
+    You are an expert culinary AI assistant for Shared Skillet, specializing in authentic Bangladeshi and South Asian cuisine. 
     Today is {current_date}.
     
-    Current preferences:
-    - Cooking Style Focus: {cooking_style}
-    - Expertise Level: {expertise_level}
-    - Dietary Restrictions: {diet_string}
+    Current user preferences:
+    - Cooking Style: {prefs["cooking_style"]}
+    - Expertise Level: {prefs["expertise_level"]}
+    - Dietary Restrictions: {', '.join(prefs["dietary_restrictions"]) if prefs["dietary_restrictions"] else "None"}
+    - Spice Level: {prefs["spice_level"]}
+    - Serving Size: {prefs["serving_size"]}
     
-    Guidelines:
-    1. Provide clear, step-by-step cooking instructions when sharing recipes
-    2. Suggest ingredient substitutions when appropriate, especially for dietary restrictions
-    3. Explain cooking techniques at the appropriate level
-    4. Include cooking times, temperatures, and yields where relevant
-    5. Offer tips for food preparation, storage, and safety
+    {menu_context}
     
-    Always prioritize food safety and proper handling techniques in your advice.
+    CORE GUIDELINES:
+    1. ALWAYS check if user requests match our menu items first
+    2. If menu items are relevant, present them as the primary recommendation
+    3. Only suggest generic/alternative recipes if no menu items match
+    4. Provide detailed, professional cooking instructions
+    5. Include ingredient substitutions and cooking tips
+    6. Emphasize food safety and proper techniques
+    7. Adapt complexity to user's expertise level
+    8. Respect dietary restrictions and preferences
     
-    The user can:
-    - Ask for recipes
-    - Add recipes to their shopping list by saying "add this to my shopping list"
-    - Request a meal plan by asking for one
-    - Ask cooking questions
+    RESPONSE STYLE:
+    - Professional yet friendly tone
+    - Clear, step-by-step instructions
+    - Include cooking times, temperatures, and yields
+    - Provide cultural context for traditional dishes
+    - Suggest presentation and serving tips
     
-    Help the user accomplish their cooking goals regardless of their experience level.
+    Always prioritize Shared Skillet's authentic menu items over generic suggestions.
     """
-    
-    if purpose == "shopping_list":
-        return base_system_message + """
-        For extracting shopping list ingredients:
-        1. Extract ingredients from the recipe in a structured format
-        2. Group ingredients by category (produce, dairy, meat, pantry items, etc.)
-        3. Specify quantities and units clearly
-        4. Format your response as a JSON object with the following structure:
-        {
-            "produce": [{"item": "tomato", "quantity": "2", "unit": "medium"}],
-            "dairy": [{"item": "milk", "quantity": "1", "unit": "cup"}],
-            "meat": [],
-            "pantry": [],
-            "spices": [],
-            "other": []
-        }
-        Only respond with the JSON. Do not include any explanations or additional text.
-        """
-    
-    elif purpose == "meal_plan":
-        return base_system_message + """
-        For creating a meal plan:
-        1. Create a 7-day meal plan with breakfast, lunch, and dinner options
-        2. Follow any dietary preferences, restrictions and cooking style
-        3. Keep recipes appropriate to the skill level
-        4. Include variety across the week\
-        5. If Nothing mentioned generate Bangladeshi style Recipes
-        6. Format your response as a JSON object with the following structure:
-        {
-            "monday": {
-                "breakfast": {"title": "Avocado Toast", "description": "Simple avocado toast with eggs", "prep_time": "15 minutes"},
-                "lunch": {"title": "Mediterranean Salad", "description": "Fresh salad with feta and olives", "prep_time": "20 minutes"},
-                "dinner": {"title": "Pasta Primavera", "description": "Seasonal vegetables with pasta", "prep_time": "30 minutes"}
-            },
-            "tuesday": {
-                "breakfast": {},
-                "lunch": {},
-                "dinner": {}
-            },
-            ...and so on for each day of the week...
-        }
-        Only respond with the JSON. Do not include any explanations or additional text.
-        """
     
     return base_system_message
 
-# Function to extract preferences from user messages
-def extract_preferences(message):
-    try:
-        # Call Euron API to extract preferences
-        system_content = "You are a system that extracts cooking preferences from user messages. Extract any mentioned cooking style, dietary restrictions, or expertise level. Format as JSON with keys 'cooking_style', 'expertise_level', and 'dietary_restrictions' (array). Only respond with JSON. Follow Bangladeshi Style by default if not mentioned in cooking style"
-        
-        messages = [
-            {"role": "system", "content": system_content},
-            {"role": "user", "content": message}
-        ]
-        
-        response_content = call_euron_api(messages, temperature=0.3, max_tokens=500)
-        
-        # Extract JSON from response
-        try:
-            # Find JSON in the response
-            json_match = re.search(r'({.+})', response_content, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
-                prefs = json.loads(json_str)
-            else:
-                prefs = json.loads(response_content)
-            
-            # Update preferences if new ones were found
-            updated = False
-            
-            if "cooking_style" in prefs and prefs["cooking_style"]:
-                st.session_state.user_preferences["cooking_style"] = prefs["cooking_style"]
-                updated = True
-                
-            if "expertise_level" in prefs and prefs["expertise_level"]:
-                st.session_state.user_preferences["expertise_level"] = prefs["expertise_level"]
-                updated = True
-                
-            if "dietary_restrictions" in prefs and prefs["dietary_restrictions"]:
-                # Add new restrictions without duplicates
-                current = set(st.session_state.user_preferences["dietary_restrictions"])
-                new = set(prefs["dietary_restrictions"])
-                st.session_state.user_preferences["dietary_restrictions"] = list(current.union(new))
-                updated = True
-                
-            return updated
-            
-        except Exception as e:
-            print(f"Error parsing preferences JSON: {str(e)}")
-            return False
-            
-    except Exception as e:
-        print(f"Error extracting preferences: {str(e)}")
-        return False
-
-# Function to extract ingredients from recipe text
-def extract_ingredients(recipe_text):
-    try:
-        # Call Euron API to extract ingredients in structured format
-        messages = [
-            {"role": "system", "content": generate_system_message(purpose="shopping_list")},
-            {"role": "user", "content": f"Extract ingredients from this recipe: {recipe_text}"}
-        ]
-        
-        response_content = call_euron_api(messages, temperature=0.3, max_tokens=1000)
-        
-        # Parse the response as JSON
-        try:
-            # Find JSON in the response
-            json_match = re.search(r'({.+})', response_content, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
-                ingredients_json = json.loads(json_str)
-            else:
-                ingredients_json = json.loads(response_content)
-            
-            return ingredients_json
-        except Exception as e:
-            print(f"Error parsing ingredients JSON: {str(e)}")
-            return {}
-    except Exception as e:
-        st.error(f"Error extracting ingredients: {str(e)}")
-        return {}
-
-# Function to generate a meal plan
-def generate_meal_plan():
-    try:
-        # Get preferences for the meal plan
-        prefs = st.session_state.user_preferences
-        preferences = f"Cooking style: {prefs['cooking_style']}, Expertise level: {prefs['expertise_level']}, Dietary restrictions: {', '.join(prefs['dietary_restrictions'])}"
-        
-        # Call Euron API to generate a meal plan
-        messages = [
-            {"role": "system", "content": generate_system_message(purpose="meal_plan")},
-            {"role": "user", "content": f"Create a weekly meal plan based on these preferences: {preferences}"}
-        ]
-        
-        response_content = call_euron_api(messages, temperature=0.7, max_tokens=2000)
-        
-        # Parse the response as JSON
-        try:
-            # Find JSON in the response
-            json_match = re.search(r'({.+})', response_content, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
-                meal_plan_json = json.loads(json_str)
-            else:
-                meal_plan_json = json.loads(response_content)
-            
-            return meal_plan_json
-        except Exception as e:
-            print(f"Error parsing meal plan JSON: {str(e)}")
-            return {}
-    except Exception as e:
-        st.error(f"Error generating meal plan: {str(e)}")
-        return {}
-
-# Function to add items to shopping list
-def add_to_shopping_list(ingredients):
-    for category, items in ingredients.items():
-        if category not in st.session_state.shopping_list:
-            st.session_state.shopping_list[category] = []
-        
-        # Add new items or update quantities of existing items
-        for new_item in items:
-            item_exists = False
-            for existing_item in st.session_state.shopping_list[category]:
-                if existing_item["item"].lower() == new_item["item"].lower():
-                    # Item exists, try to update quantity if possible
-                    try:
-                        if existing_item["unit"] == new_item["unit"]:
-                            existing_item["quantity"] = str(float(existing_item["quantity"]) + float(new_item["quantity"]))
-                        else:
-                            # If units don't match, just add as separate item
-                            st.session_state.shopping_list[category].append(new_item)
-                    except:
-                        # If conversion fails, just add as a new item
-                        st.session_state.shopping_list[category].append(new_item)
-                    item_exists = True
-                    break
-            
-            if not item_exists:
-                st.session_state.shopping_list[category].append(new_item)
+# Enhanced tab system
+tab_container = st.container()
+with tab_container:
+    st.markdown('<div class="tab-container">', unsafe_allow_html=True)
+    tabs = ["AI Assistant", "Menu Explorer", "Shopping List", "Meal Planning", "Smart Recommendations"]
+    cols = st.columns(len(tabs))
+    
+    for i, tab in enumerate(tabs):
+        with cols[i]:
+            is_active = st.session_state.current_tab == tab
+            button_style = "primary" if is_active else "secondary"
+            if st.button(f"{'🤖' if tab == 'AI Assistant' else '📋' if tab == 'Menu Explorer' else '🛒' if tab == 'Shopping List' else '📅' if tab == 'Meal Planning' else '✨'} {tab}", 
+                        key=f"tab_{tab}", use_container_width=True, type=button_style):
+                st.session_state.current_tab = tab
+                st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Main content based on current tab
-if st.session_state.current_tab == "Chat":
-    # Optional user preferences (hidden by default)
-    with st.expander("Customize Your Experience", expanded=False):
-        col1, col2 = st.columns(2)
+if st.session_state.current_tab == "AI Assistant":
+    # Enhanced preferences section
+    with st.expander("🎯 Personalize Your Experience", expanded=False):
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             cooking_style = st.selectbox(
-                "Cooking Style Preference",
-                ["General", "Bangladeshi", "Italian", "Mexican", "Asian", "Mediterranean", "Indian", "French", "American", "Vegetarian", "Vegan"],
-                index=["General", "Bangladeshi", "Italian", "Mexican", "Asian", "Mediterranean", "Indian", "French", "American", "Vegetarian", "Vegan"].index(st.session_state.user_preferences["cooking_style"])
+                "Preferred Cuisine Style",
+                ["Bangladeshi", "South Asian", "Indo-Pakistani", "Middle Eastern", "Fusion", "Traditional"],
+                index=0 if st.session_state.user_preferences["cooking_style"] == "Bangladeshi" else 0
             )
             
-            if cooking_style != st.session_state.user_preferences["cooking_style"]:
-                st.session_state.user_preferences["cooking_style"] = cooking_style
+            spice_level = st.select_slider(
+                "Spice Preference",
+                options=["Mild", "Medium", "Spicy", "Extra Spicy"],
+                value=st.session_state.user_preferences["spice_level"]
+            )
         
         with col2:
             expertise_level = st.select_slider(
-                "Your Cooking Expertise",
+                "Cooking Expertise",
                 options=["Beginner", "Intermediate", "Advanced", "Professional"],
                 value=st.session_state.user_preferences["expertise_level"]
             )
             
-            if expertise_level != st.session_state.user_preferences["expertise_level"]:
-                st.session_state.user_preferences["expertise_level"] = expertise_level
+            serving_size = st.selectbox(
+                "Typical Serving Size",
+                ["2-3 people", "4-6 people", "8-10 people", "Large party (15+ people)"],
+                index=1
+            )
         
-        dietary_restrictions = st.multiselect(
-            "Dietary Preferences or Restrictions",
-            ["Gluten-Free", "Dairy-Free", "Nut-Free", "Vegetarian", "Vegan", "Low-Carb", "Low-Sugar", "Keto", "Paleo"],
-            default=st.session_state.user_preferences["dietary_restrictions"]
-        )
+        with col3:
+            dietary_restrictions = st.multiselect(
+                "Dietary Preferences",
+                ["Halal", "Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Low-Carb", "Keto"],
+                default=st.session_state.user_preferences["dietary_restrictions"]
+            )
         
-        if dietary_restrictions != st.session_state.user_preferences["dietary_restrictions"]:
-            st.session_state.user_preferences["dietary_restrictions"] = dietary_restrictions
+        # Update preferences
+        if st.button("Update Preferences"):
+            st.session_state.user_preferences.update({
+                "cooking_style": cooking_style,
+                "expertise_level": expertise_level,
+                "dietary_restrictions": dietary_restrictions,
+                "spice_level": spice_level,
+                "serving_size": serving_size
+            })
+            st.success("✅ Preferences updated!")
     
-    # Intro message for new users
+    # Welcome message for new users
     if not st.session_state.messages:
         st.markdown("""
-        ## 👋 Welcome to Shared Skillet AI!
-        You can visit sharedskillet.com and view some ready made recipes. You can also share your own recipes with community.
+        ## 👋 Welcome to Shared Skillet AI Professional!
         
-        I'm your AI cooking assistant, ready to help with:
+        ### 🌟 What makes us special:
+        - **Authentic Menu Integration**: Get recipes from our curated collection
+        - **Smart Recommendations**: AI-powered suggestions based on your preferences  
+        - **Professional Guidance**: Expert-level cooking instructions and tips
+        - **Cultural Authenticity**: Traditional Bangladeshi and South Asian specialties
         
-        - 🍲 **Recipe ideas and cooking instructions**
-        - 📝 **Meal planning** for the week
-        - 🛒 **Shopping list generation** from recipes
-        - 💡 **Cooking techniques and tips**
-        
-        Just ask me anything about cooking! Try these examples:
-        - "I need a quick pasta recipe for dinner"
-        - "How do I make sourdough bread?"
-        - "Create a meal plan for the week"
-        - "What can I cook with chicken, broccoli and rice?"
+        ### 💡 Try asking:
+        - "Show me your best biryani recipes"
+        - "I want something spicy for dinner"
+        - "What desserts do you recommend?"
+        - "Create a traditional Bangladeshi meal plan"
+        - "I have chicken and rice, what can you suggest?"
         """)
         
-        # Add default welcome message
         st.session_state.messages.append({
-            "role": "assistant", 
-            "content": "Hello! I'm Shared Skillet AI: your cooking assistant. What would you like to cook today?"
+            "role": "assistant",
+            "content": "Hello! I'm your Shared Skillet AI assistant. I specialize in authentic Bangladeshi and South Asian cuisine, and I have access to our curated menu of professional dishes. What would you like to cook today? 🍳"
         })
     
-    # Display chat messages from history
+    # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
-
-    # New message input
-    prompt = st.chat_input("Ask me anything about cooking...")
-
+    
+    # Enhanced chat input
+    prompt = st.chat_input("Ask about our menu, get recipes, or culinary advice...")
+    
     if prompt:
-        # Add user message to chat history
+        # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         
-        # Display user message
         with st.chat_message("user"):
             st.write(prompt)
         
-        # Extract preferences if any are mentioned
-        extract_preferences(prompt)
+        # Smart menu search
+        relevant_items = smart_menu_search(prompt, limit=5)
         
-        # Check if this is a request to add to shopping list or create meal plan
-        shopping_list_request = re.search(r"add (this|these|the) (recipe|ingredients) to (my )?(shopping|grocery) list", prompt.lower())
-        meal_plan_request = re.search(r"(create|make|generate) (a )?(meal|weekly|menu) plan", prompt.lower())
-        
-        # Display assistant response with a spinner
         with st.chat_message("assistant"):
-            with st.spinner("Cooking up a response..."):
-                # Create the messages array for the API call
-                messages = [
-                    {"role": "system", "content": generate_system_message()}
-                ]
-                
-                # Add all conversation history
-                for msg in st.session_state.messages:
-                    messages.append({"role": msg["role"], "content": msg["content"]})
-                
-                # Call Euron API
-                try:
-                    response_content = call_euron_api(messages, temperature=0.7, max_tokens=1000)
+            with st.spinner("Analyzing your request and searching our menu..."):
+                # If relevant menu items found, show them first
+                if relevant_items:
+                    st.markdown("### 🎯 From Our Professional Menu:")
+                    for item in relevant_items[:2]:  # Show top 2 matches
+                        display_menu_item(item, show_video=False)
                     
-                    # Add assistant response to chat history
-                    st.session_state.messages.append({"role": "assistant", "content": response_content})
+                    st.markdown("---")
+                    st.markdown("### 👨‍🍳 AI-Powered Response:")
+                    # Prepare system message with menu context
+                    system_message = generate_enhanced_system_message(
+                        purpose="recipe_request",
+                        relevant_menu_items=relevant_items
+                    )
                     
-                    # Display assistant response
-                    st.write(response_content)
+                    # Prepare messages for API call
+                    api_messages = [
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": prompt}
+                    ]
                     
-                    # Handle shopping list requests
-                    if shopping_list_request:
-                        # Look at the last few messages to find recipe content
-                        recent_messages = st.session_state.messages[-5:]  # Get last 5 messages
-                        recipe_text = ""
-                        for msg in recent_messages:
-                            if msg["role"] == "assistant" and len(msg["content"]) > 100:  # Likely a recipe
-                                recipe_text = msg["content"]
-                                break
-                        
-                        if recipe_text:
-                            with st.spinner("Adding to shopping list..."):
-                                ingredients = extract_ingredients(recipe_text)
-                                if ingredients:
-                                    add_to_shopping_list(ingredients)
-                                    st.success("✅ Ingredients added to your shopping list! Go to the Shopping List tab to view them.")
+                    # Call Euron API
+                    response = call_euron_api(api_messages)
                     
-                    # Handle meal plan requests
-                    if meal_plan_request:
-                        with st.spinner("Creating your meal plan..."):
-                            meal_plan = generate_meal_plan()
-                            if meal_plan:
-                                st.session_state.meal_plan = meal_plan
-                                st.success("✅ Meal plan created! Go to the Meal Planning tab to view it.")
+                    # Display AI response
+                    st.markdown(response)
                     
-                except Exception as e:
-                    st.error(f"Error: {str(e)}")
-                    st.error("Something went wrong. Please try again later.")
+                    # Add to session state
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": response
+                    })
+                    
+                    # Store recommendations for Smart Recommendations tab
+                    st.session_state.recommended_items = relevant_items
+
+elif st.session_state.current_tab == "Menu Explorer":
+    st.markdown("## 📋 Menu Explorer")
+    st.markdown("Explore our curated selection of authentic Bangladeshi and South Asian dishes.")
+    
+    # Search and filter options
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        search_query = st.text_input("Search menu...", "")
+    with col2:
+        category_filter = st.selectbox("Category", ["All"] + sorted(set(item.category for item in MENU_ITEMS)))
+    with col3:
+        taste_filter = st.selectbox("Taste", ["All"] + sorted(set(item.taste_category for item in MENU_ITEMS)))
+    
+    # Filter menu items
+    filtered_items = MENU_ITEMS
+    if search_query:
+        filtered_items = smart_menu_search(search_query, limit=len(MENU_ITEMS))
+    if category_filter != "All":
+        filtered_items = [item for item in filtered_items if item.category == category_filter]
+    if taste_filter != "All":
+        filtered_items = [item for item in filtered_items if item.taste_category == taste_filter]
+    
+    # Display filtered items
+    for item in filtered_items:
+        display_menu_item(item)
 
 elif st.session_state.current_tab == "Shopping List":
-    # Empty shopping list message
+    st.markdown("## 🛒 Shopping List")
+    st.markdown("Manage ingredients needed for your selected dishes.")
+    
     if not st.session_state.shopping_list:
-        st.info("Your shopping list is empty. Get recipes in the chat and add them to your list!")
-        
-        # Button to go back to chat
-        if st.button("Ask for Recipe Ideas"):
-            st.session_state.current_tab = "Chat"
-            st.rerun()
+        st.info("Your shopping list is empty. Add items from the Menu Explorer or AI Assistant!")
     else:
-        # Display shopping list by category
-        col1, col2 = st.columns([3, 1])
+        st.markdown('<div class="shopping-list">', unsafe_allow_html=True)
+        for dish_name, items in st.session_state.shopping_list.items():
+            st.markdown(f"### {dish_name}")
+            for item in items:
+                st.markdown(f"- {item}")
+        st.markdown('</div>', unsafe_allow_html=True)
         
-        with col1:
-            for category, items in st.session_state.shopping_list.items():
-                if items:  # Only show categories with items
-                    st.subheader(f"{category.capitalize()}")
-                    
-                    for i, item in enumerate(items):
-                        col_a, col_b, col_c = st.columns([1, 3, 1])
-                        with col_a:
-                            if st.checkbox("", key=f"item_{category}_{i}"):
-                                # Mark as purchased (to implement)
-                                pass
-                        with col_b:
-                            st.write(f"{item['quantity']} {item['unit']} {item['item']}")
-                        with col_c:
-                            if st.button("Remove", key=f"remove_{category}_{i}"):
-                                st.session_state.shopping_list[category].pop(i)
-                                st.rerun()
-            
-        with col2:
-            st.subheader("Actions")
-            if st.button("Clear Shopping List"):
-                st.session_state.shopping_list = {}
-                st.rerun()
-            
-            if st.button("Export as CSV"):
-                # Convert to dataframe
-                shopping_data = []
-                for category, items in st.session_state.shopping_list.items():
-                    for item in items:
-                        shopping_data.append({
-                            "Category": category,
-                            "Item": item["item"],
-                            "Quantity": item["quantity"],
-                            "Unit": item["unit"]
-                        })
-                
-                df = pd.DataFrame(shopping_data)
-                
-                # Create a download button
-                csv = df.to_csv(index=False)
-                st.download_button(
-                    label="Download CSV",
-                    data=csv,
-                    file_name="shopping_list.csv",
-                    mime="text/csv",
-                )
-            
-            st.divider()
-            
-            st.subheader("Add Item Manually")
-            with st.form("add_item_form"):
-                new_category = st.selectbox("Category", ["produce", "dairy", "meat", "pantry", "spices", "other"])
-                new_item = st.text_input("Item")
-                col_qty, col_unit = st.columns(2)
-                with col_qty:
-                    new_quantity = st.text_input("Quantity", "1")
-                with col_unit:
-                    new_unit = st.selectbox("Unit", ["", "piece", "lb", "oz", "cup", "tbsp", "tsp", "can", "package"])
-                
-                if st.form_submit_button("Add Item"):
-                    if new_item:
-                        if new_category not in st.session_state.shopping_list:
-                            st.session_state.shopping_list[new_category] = []
-                        
-                        st.session_state.shopping_list[new_category].append({
-                            "item": new_item,
-                            "quantity": new_quantity,
-                            "unit": new_unit
-                        })
-                        st.success(f"Added {new_item} to shopping list!")
-                        st.rerun()
+        # Clear shopping list
+        if st.button("Clear Shopping List"):
+            st.session_state.shopping_list = {}
+            st.success("✅ Shopping list cleared!")
+            st.rerun()
 
 elif st.session_state.current_tab == "Meal Planning":
-    # Empty meal plan message
-    if not st.session_state.meal_plan:
-        st.info("You haven't created a meal plan yet.")
+    st.markdown("## 📅 Meal Planning")
+    st.markdown("Plan your meals with our AI-powered suggestions.")
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        days = st.slider("Select number of days to plan", 1, 7, 3)
+    with col2:
+        meals_per_day = st.selectbox("Meals per day", [1, 2, 3], index=1)
+    
+    if st.button("Generate Meal Plan"):
+        with st.spinner("Creating your personalized meal plan..."):
+            system_message = generate_enhanced_system_message(purpose="meal_plan")
+            prompt = f"""
+            Create a {days}-day meal plan with {meals_per_day} meals per day, 
+            respecting the following preferences:
+            - Cuisine: {st.session_state.user_preferences['cooking_style']}
+            - Spice Level: {st.session_state.user_preferences['spice_level']}
+            - Dietary Restrictions: {', '.join(st.session_state.user_preferences['dietary_restrictions'])}
+            - Serving Size: {st.session_state.user_preferences['serving_size']}
+            Prioritize dishes from our menu: {', '.join([item.dish_name for item in MENU_ITEMS])}.
+            Format the response as a clear, structured plan with day-wise meal assignments.
+            """
+            
+            api_messages = [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": prompt}
+            ]
+            
+            response = call_euron_api(api_messages)
+            st.session_state.meal_plan = {"plan": response}
+            st.markdown('<div class="meal-plan">', unsafe_allow_html=True)
+            st.markdown(response)
+            st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Display existing meal plan
+    if st.session_state.meal_plan.get("plan"):
+        st.markdown('<div class="meal-plan">', unsafe_allow_html=True)
+        st.markdown("### Current Meal Plan")
+        st.markdown(st.session_state.meal_plan["plan"])
+        st.markdown('</div>', unsafe_allow_html=True)
         
-        # Button to create a meal plan
-        if st.button("Create a Meal Plan Now"):
-            with st.spinner("Creating your personalized meal plan..."):
-                meal_plan = generate_meal_plan()
-                if meal_plan:
-                    st.session_state.meal_plan = meal_plan
+        if st.button("Clear Meal Plan"):
+            st.session_state.meal_plan = {}
+            st.success("✅ Meal plan cleared!")
+            st.rerun()
+
+elif st.session_state.current_tab == "Smart Recommendations":
+    st.markdown("## ✨ Smart Recommendations")
+    st.markdown("Discover dishes tailored to your preferences and recent interactions.")
+    
+    if not st.session_state.recommended_items:
+        st.info("No recommendations yet. Interact with the AI Assistant or Menu Explorer to get personalized suggestions!")
+    else:
+        st.markdown('<div class="smart-suggestion">', unsafe_allow_html=True)
+        st.markdown("### Based on Your Recent Activity")
+        for item in st.session_state.recommended_items[:3]:
+            display_menu_item(item, show_video=False)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Additional AI-driven suggestions
+        if st.button("Get More Recommendations"):
+            with st.spinner("Generating new recommendations..."):
+                system_message = generate_enhanced_system_message(purpose="recommendations")
+                prompt = f"""
+                Suggest 3 additional dishes from our menu that complement the user's preferences:
+                - Cuisine: {st.session_state.user_preferences['cooking_style']}
+                - Spice Level: {st.session_state.user_preferences['spice_level']}
+                - Dietary Restrictions: {', '.join(st.session_state.user_preferences['dietary_restrictions'])}
+                - Serving Size: {st.session_state.user_preferences['serving_size']}
+                Current recommendations: {', '.join([item.dish_name for item in st.session_state.recommended_items])}.
+                Avoid repeating current recommendations.
+                """
+                
+                api_messages = [
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt}
+                ]
+                
+                response = call_euron_api(api_messages)
+                # Parse response to extract dish names (assuming API returns dish names)
+                new_dish_names = re.findall(r'\b\w+\b', response)  # Simplified parsing
+                new_recommendations = []
+                for dish_name in new_dish_names:
+                    for item in MENU_ITEMS:
+                        if dish_name.lower() in item.dish_name.lower() and item not in st.session_state.recommended_items:
+                            new_recommendations.append(item)
+                            break
+                
+                if new_recommendations:
+                    st.session_state.recommended_items.extend(new_recommendations[:3])
                     st.rerun()
                 else:
-                    st.error("Failed to create meal plan. Please try again.")
-        
-        # Button to go back to chat
-        if st.button("Ask About Meal Planning"):
-            st.session_state.messages.append({
-                "role": "user", 
-                "content": "I'd like you to create a meal plan for me. Can you help with that?"
-            })
-            st.session_state.current_tab = "Chat"
-            st.rerun()
-    else:
-        # Display meal plan
-        days_of_week = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-        meal_types = ["breakfast", "lunch", "dinner"]
-        
-        # Date display for the week
-        today = datetime.now()
-        start_of_week = today - timedelta(days=today.weekday())
-        dates = {days_of_week[i]: (start_of_week + timedelta(days=i)).strftime('%b %d') for i in range(7)}
-        
-        # Actions for meal plan
-        col1, col2, col3 = st.columns([2, 2, 1])
-        with col1:
-            st.subheader("Your Weekly Meal Plan")
-        with col3:
-            if st.button("Create New Plan"):
-                st.session_state.meal_plan = {}
-                st.rerun()
-            
-            if st.button("Add All to Shopping List"):
-                # Extract all ingredients from all meals
-                all_meals_text = ""
-                for day in days_of_week:
-                    if day in st.session_state.meal_plan:
-                        for meal_type in meal_types:
-                            if meal_type in st.session_state.meal_plan[day] and st.session_state.meal_plan[day][meal_type]:
-                                meal = st.session_state.meal_plan[day][meal_type]
-                                all_meals_text += f"{meal['title']}: {meal['description']}\n"
-                
-                with st.spinner("Adding ingredients to shopping list..."):
-                    ingredients = extract_ingredients(all_meals_text)
-                    if ingredients:
-                        add_to_shopping_list(ingredients)
-                        st.success("✅ All meal ingredients added to your shopping list!")
-        
-        # Display the meal plan in a calendar view
-        for day in days_of_week:
-            if day in st.session_state.meal_plan:
-                with st.expander(f"{day.capitalize()} ({dates[day]})", expanded=True):
-                    # Three columns for breakfast, lunch, dinner
-                    cols = st.columns(3)
-                    
-                    for i, meal_type in enumerate(meal_types):
-                        with cols[i]:
-                            st.subheader(meal_type.capitalize())
-                            
-                            if meal_type in st.session_state.meal_plan[day] and st.session_state.meal_plan[day][meal_type]:
-                                meal = st.session_state.meal_plan[day][meal_type]
-                                
-                                st.markdown(f"""
-                                <div class="recipe-card">
-                                    <h4>{meal['title']}</h4>
-                                    <p>{meal['description']}</p>
-                                    <p><strong>Prep time:</strong> {meal['prep_time']}</p>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                
-                                if st.button(f"Get Recipe", key=f"recipe_{day}_{meal_type}"):
-                                    # Add message to chat history asking for this recipe
-                                    st.session_state.messages.append({
-                                        "role": "user", 
-                                        "content": f"Please give me a detailed recipe for {meal['title']} ({meal['description']})"
-                                    })
-                                    st.session_state.current_tab = "Chat"
-                                    st.rerun()
-                                
-                                if st.button(f"Add to Shopping List", key=f"shop_{day}_{meal_type}"):
-                                    with st.spinner("Adding to shopping list..."):
-                                        meal_text = f"{meal['title']}: {meal['description']}"
-                                        ingredients = extract_ingredients(meal_text)
-                                        if ingredients:
-                                            add_to_shopping_list(ingredients)
-                                            st.success(f"✅ Added {meal['title']} ingredients to shopping list!")
-                            else:
-                                st.write("No meal planned")
-
-# Add a small custom footer
-st.markdown("""
-<div style="text-align: center; margin-top: 30px; font-size: 0.8em; color: #666;">
-    Shared Skillet AI | Your personal AI cooking assistant
-</div>
-""", unsafe_allow_html=True)
+                    st.warning("No new recommendations found. Try adjusting your preferences!")
